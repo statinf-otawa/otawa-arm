@@ -1,2 +1,2 @@
 [elm-plugin]
-path=$ORIGIN/arm
+path=$ORIGIN/../otawa/arm

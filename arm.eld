@@ -1,2 +1,4 @@
 [elm-plugin]
-path=$ORIGIN/../../loader/arm
+name=otawa/arm
+description=ARMv7T loader
+author=Hugues Casse <casse@irit.fr>
