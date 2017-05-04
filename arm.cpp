@@ -1001,16 +1001,10 @@ void Inst::semInsts (sem::Block &block) {
 		}
 }
 
-/****** loader definition ******/
-
-// alias table
-static string table[] = { "elf_40", "arm2" };
-static elm::genstruct::Table<string> loader_aliases(table, 1);
-
 // loader definition
 class Loader: public otawa::Loader {
 public:
-	Loader(void): otawa::Loader("arm", Version(ARM_VERSION), OTAWA_LOADER_VERSION, loader_aliases) {
+	Loader(void): otawa::Loader(make("arm", OTAWA_LOADER_VERSION).version(ARM_VERSION).alias("elf_40").alias("arm2")) {
 	}
 
 	virtual CString getName(void) const { return "arm"; }
