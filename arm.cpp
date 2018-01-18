@@ -20,16 +20,20 @@
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <otawa/prog/Loader.h>
-#include <otawa/proc/ProcessorPlugin.h>
-#include <otawa/hard.h>
-#include <otawa/program.h>
+#include <gel/debug_line.h>
 #include <gel/gel.h>
 #include <gel/gel_elf.h>
-#include <gel/debug_line.h>
-#include <otawa/prog/sem.h>
-#include <otawa/loader/arm.h>
+
 #include <elm/stree/MarkerBuilder.h>
+#include <elm/stree/SegmentBuilder.h>
+
+//#include "config.h"
+#include <otawa/hard.h>
+#include <otawa/loader/arm.h>
+#include <otawa/proc/ProcessorPlugin.h>
+#include <otawa/prog/Loader.h>
+#include <otawa/prog/sem.h>
+#include <otawa/program.h>
 
 extern "C" {
 #	include <arm/grt.h>
@@ -47,8 +51,7 @@ namespace arm {
  * * ARM_SIM -- integrate functional simulator in ARM plugin.
  */
 
-//#define VERSION "2.1.0"
-//OTAWA_LOADER_ID("arm2", VERSION, OTAWA_DATE);
+#define VERSION "2.1.0"
 
 /**
  * @class Info
@@ -258,6 +261,7 @@ static RegisterDecoder register_decoder;
 #define _SCRATCH(d)		sem::scratch(d)
 
 #include "otawa_sem.h"
+#include "otawa_ksem.h"
 
 
 // platform
@@ -282,12 +286,14 @@ const Platform::Identification Platform::ID("arm-eabi-");
 
 class Process;
 
+#include "otawa_condition.h"
+
 // Inst class
 class Inst: public otawa::Inst {
 public:
 
 	inline Inst(Process& process, kind_t kind, Address addr, int size)
-		: proc(process), _kind(kind), _size(size), _addr(addr), isRegsDone(false) {
+		: proc(process), _kind(kind), _size(size), _addr(addr.offset()), isRegsDone(false) {
 		}
 
 	// Inst overload
@@ -314,6 +320,9 @@ public:
 	}
 
 	virtual void semInsts(sem::Block &block);
+	virtual void semKernel(sem::Block &block);
+	virtual Condition condition(void);
+
 protected:
 	Process &proc;
 	kind_t _kind;
@@ -333,18 +342,16 @@ class BranchInst: public Inst {
 public:
 
 	inline BranchInst(Process& process, kind_t kind, Address addr, int size)
-		: Inst(process, fixKind(process, addr, kind), addr, size), _target(0), isTargetDone(false)
+		: Inst(process, kind & ~IS_CONTROL, addr, size), _target(0), isTargetDone(false)
 		{ }
 
 	virtual otawa::Inst *target();
+	virtual kind_t kind(void);
 
 protected:
 	arm_address_t decodeTargetAddress(void);
 
 private:
-
-	static kind_t fixKind(Process& process, const Address& addr, kind_t kind);
-
 	otawa::Inst *_target;
 	bool isTargetDone;
 };
@@ -445,6 +452,7 @@ public:
 		provide(CONTROL_DECODING_FEATURE);
 		provide(REGISTER_USAGE_FEATURE);
 		provide(MEMORY_ACCESSES);
+		provide(CONDITIONAL_INSTRUCTIONS_FEATURE);
 		Info::ID(this) = this;
 	}
 
@@ -516,6 +524,7 @@ public:
 		gel_image_close(gimage);
 
 		// build segments
+		stree::SegmentBuilder<t::uint32, bool> builder(false);
 		gel_file_info_t infos;
 		gel_file_infos(_file, &infos);
 		for (int i = 0; i < infos.sectnum; i++) {
@@ -525,8 +534,10 @@ public:
 			gel_sect_infos(sect, &infos);
 			if(infos.vaddr != 0 && infos.size != 0) {
 				int flags = 0;
-				if(infos.flags & SHF_EXECINSTR)
+				if(infos.flags & SHF_EXECINSTR) {
 					flags |= Segment::EXECUTABLE;
+					builder.add(infos.vaddr, infos.vaddr + infos.size, true);
+				}
 				if(infos.flags & SHF_WRITE)
 					flags |= Segment::WRITABLE;
 				if(infos.type == SHT_PROGBITS)
@@ -535,6 +546,8 @@ public:
 				file->addSegment(seg);
 			}
 		}
+		stree::Tree<t::uint32, bool> execs;
+		builder.make(execs);
 
 		// Initialize symbols
 #		ifdef ARM_THUMB
@@ -547,8 +560,6 @@ public:
 		for(sym = gel_sym_first(&iter, _file); sym; sym = gel_sym_next(&iter)) {
 
 			// get the symbol description
-			//gel_sym_t *sym = gel_find_file_symbol(_file, name);
-			//assert(sym);
 			gel_sym_info_t infos;
 			gel_sym_infos(sym, &infos);
 
@@ -577,6 +588,8 @@ public:
 				mask = 0xfffffffe;
 				break;
 			case STT_NOTYPE:
+				if(!execs.contains(infos.vaddr & mask))
+					continue;
 				kind = Symbol::LABEL;
 				break;
 			case STT_OBJECT:
@@ -759,6 +772,7 @@ public:
 	}
 	virtual void get(Address at, char *buf, int size)
 		{ arm_mem_read(_memory, at.offset(), buf, size); }
+	virtual int maxTemp (void) const { return 3; }
 
 	// otawa::arm::Info overload
 	virtual void *decode(otawa::Inst *inst) { return decode_raw(inst->address()); }
@@ -887,17 +901,19 @@ arm_address_t BranchInst::decodeTargetAddress(void) {
 
 	// get the target
 	arm_inst_t *inst= proc.decode_raw(address());
-	Address target_addr = arm_target(inst);
+	arm_address_t target_addr = arm_target(inst);
 
 	// thumb-1 case
+
 #		ifdef ARM_THUMB
 
 		// blx/0; blx/1
 		if(_kind & Process::IS_BL_1) {
 			arm_inst_t *pinst = proc.decode_raw(address() - 2);
 			Inst::kind_t pkind = arm_kind(pinst);
-			if(pkind & Process::IS_BL_0)
-				target_addr = arm_target(pinst) + target_addr.offset();
+			if(pkind & Process::IS_BL_0) {
+				target_addr = arm_target(pinst) + target_addr;
+			}
 			proc.free_inst(pinst);
 		}
 
@@ -928,52 +944,48 @@ arm_address_t BranchInst::decodeTargetAddress(void) {
 
 
 /**
- * Fix possibly the kind of a branch instruction.
- * @param process	Current process.
- * @param kind		Original kind.
- * @return			Fixed kind.
  */
-Inst::kind_t BranchInst::fixKind(Process& process, const Address& addr, kind_t kind) {
+BranchInst::kind_t BranchInst::kind(void) {
+	if(!(_kind & IS_CONTROL)) {
+		_kind |= IS_CONTROL;
 
-	// pop { ..., ri, ... }; bx ri
-	if(kind && Process::IS_THUMB_BX) {
-		t::uint16 pre_half, cur_half;
-		process.get(addr, cur_half);
-		process.get(addr - 2, pre_half);
-		int r = (cur_half >> 3) & 0xf;
-		if(r < 8
-		&& (pre_half & 0xff00) == 0xbc00
-		&& (pre_half & (1 << r)))
-			kind |= IS_RETURN;
+		// thumb: pop { ..., ri, ... }; bx ri
+		if(_kind & Process::IS_THUMB_BX) {
+			t::uint16 pre_half, cur_half;
+			process().get(address(), cur_half);
+			process().get(address() - 2, pre_half);
+			int r = (cur_half >> 3) & 0xf;
+			if(r < 8
+			&& (pre_half & 0xff00) == 0xbc00
+			&& (pre_half & (1 << r)))
+				_kind |= IS_RETURN;
+		}
+
+		// mov lr, pc; mov pc, ri
+		else if(size() == 4 && prevInst()->topAddress() == address()) {
+
+			// get instruction words
+			t::uint32 cword, pword;
+			process().get(address(), cword);
+			process().get(prevInst()->address(), pword);
+
+			// check instructions
+			if((pword & 0x0fffffff) == 0x01a0e00f				// mov pc, lr
+			&& (pword & 0xf0000000) == (cword & 0xf0000000)		// same condition
+			&& (cword & 0x0ffff000) == 0x01a0f000)
+				_kind |= IS_CALL;
+		}
+
 	}
-
-	// no modification
-	return kind;
+	return _kind;
 }
-
 
 otawa::Inst *BranchInst::target() {
 	if (!isTargetDone) {
 		isTargetDone = true;
-
-		// try to decode the address
 		arm_address_t a = decodeTargetAddress();
 		if (a)
 			_target = process().findInstAt(a);
-
-		// else try to scan if it is a call
-		// TODO		Seems a bit strange and bad documented
-		else if(size() == 4) {
-			otawa::Inst *prev = this->prevInst();
-			if(prev && prev->size() == 4) {
-				t::uint32 my_word, prev_word;
-				proc.get(address(), my_word);
-				proc.get(prev->address(), prev_word);
-				if((prev_word & 0x0fffffff) == 0x01a0e00f 					// test previous opcode
-				&& (prev_word & 0xf0000000) == (my_word & 0xf0000000))		// test same condition
-					_kind |= IS_CALL;
-			}
-		}
 	}
 	return _target;
 }
@@ -984,6 +996,8 @@ otawa::Inst *Segment::decode(address_t address) {
 }
 
 
+/**
+ */
 void Inst::semInsts (sem::Block &block) {
 
 	// get the block
@@ -1001,11 +1015,55 @@ void Inst::semInsts (sem::Block &block) {
 		}
 }
 
+
+/**
+ */
+void Inst::semKernel(sem::Block &block) {
+	arm_inst_t *inst = proc.decode_raw(address());
+	if(inst->ident == ARM_UNKNOWN)
+		return;
+	arm_ksem(inst, block);
+	arm_free_inst(inst);
+}
+
+
+Condition Inst::condition(void) {
+
+	// compute condition
+	arm_inst_t *inst = proc.decode_raw(address());
+	sem::cond_t cond;
+	switch (arm_condition(inst)) {
+	case 0: 	cond = sem::EQ; 		break;
+	case 1: 	cond = sem::NE; 		break;
+	case 2: 	cond = sem::UGE; 		break;
+	case 3: 	cond = sem::ULT; 		break;
+	case 8: 	cond = sem::UGT; 		break;
+	case 9:		cond = sem::ULE; 		break;
+	case 10:	cond = sem::GE; 		break;
+	case 11:	cond = sem::LT; 		break;
+	case 12:	cond = sem::GT; 		break;
+	case 13: 	cond = sem::LE; 		break;
+	case 14:	cond = sem::NO_COND; 	break;
+	default: 	cond = sem::ANY_COND;	break;
+	}
+	arm_free_inst(inst);
+
+	// make the condition
+	return Condition(cond, &sr);
+}
+
+
+/****** loader definition ******/
+
 // loader definition
 class Loader: public otawa::Loader {
 public:
-	Loader(void): otawa::Loader(make("arm", OTAWA_LOADER_VERSION).version(ARM_VERSION).alias("elf_40").alias("arm2")) {
-	}
+	Loader(void): otawa::Loader(make("arm", OTAWA_LOADER_VERSION)
+		.version(VERSION)
+		.description("loader for ARM 32-bit architecture")
+		.license(Manager::copyright)
+		.alias("elf_40")
+		.alias("arm2")) { }
 
 	virtual CString getName(void) const { return "arm"; }
 
@@ -1028,8 +1086,10 @@ public:
 // plugin definition
 class Plugin: public otawa::ProcessorPlugin {
 public:
-	Plugin(void): otawa::ProcessorPlugin("otawa/arm", Version(ARM_VERSION), OTAWA_PROC_VERSION) {
-	}
+	Plugin(void): otawa::ProcessorPlugin(make("otawa/arm", OTAWA_PROC_VERSION)
+		.version(Version(VERSION))
+		.description("plugin providing access to ARM specific resources")
+		.license(Manager::copyright)) { }
 };
 
 } }		// otawa::arm2

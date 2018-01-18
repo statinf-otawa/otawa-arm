@@ -71,14 +71,12 @@ endif()
 file(READ VERSION VERSION)
 set(CMAKE_CXX_FLAGS "-Wall -DARM_VERSION=\"${VERSION}\"" )
 set(GLISS_ATTR		"${CMAKE_SOURCE_DIR}/../gliss2/gep/gliss-attr")
-MAKE_GLISS_FUNCTION(OTAWA_KIND    "otawa_kind"      "otawa_kind.nmp"
-	"${PROC_IRG}"    "return 0;"    "${ARM_AUX}")
-MAKE_GLISS_FUNCTION(OTAWA_TARGET  "otawa_target"    "otawa_target.nmp"
-	"${PROC_IRG}"  "return 0;"    "${ARM_AUX}")
-MAKE_GLISS_PROCEDURE(OTAWA_SEM    "otawa_sem"       "otawa_sem.nmp"
-	"${PROC_IRG}"      ";"           "${ARM_AUX}")
-MAKE_GLISS_FUNCTION(OTAWA_MULTI   "otawa_multi"     "otawa_multi.nmp"
-	"${PROC_IRG}"   "return 0;"    "${ARM_AUX}")
+MAKE_GLISS_FUNCTION(OTAWA_KIND    "otawa_kind"      "otawa_kind.nmp"   		"${PROC_IRG}"   "return 0;" "${ARM_AUX}")
+MAKE_GLISS_FUNCTION(OTAWA_TARGET  "otawa_target"    "otawa_target.nmp" 		"${PROC_IRG}"   "return 0;" "${ARM_AUX}")
+MAKE_GLISS_PROCEDURE(OTAWA_SEM    "otawa_sem"       "otawa_sem.nmp"    		"${PROC_IRG}"   ";"         "${ARM_AUX}")
+MAKE_GLISS_PROCEDURE(OTAWA_KSEM   "otawa_ksem"      "otawa_ksem.nmp"   		"${PROC_IRG}"   ";"         "${ARM_AUX}")
+MAKE_GLISS_FUNCTION(OTAWA_MULTI   "otawa_multi"     "otawa_multi.nmp"  		"${PROC_IRG}"   "return 0;"	"${ARM_AUX}")
+MAKE_GLISS_FUNCTION(OTAWA_COND    "otawa_condition" "otawa_condition.nmp"   "${PROC_IRG}"   "return 0;"	"${ARM_AUX}")
 
 set(SOURCES
 	"arm.cpp"
@@ -86,6 +84,8 @@ set(SOURCES
 	${OTAWA_TARGET}
 	${OTAWA_SEM}
 	${OTAWA_MULTI}
+	${OTAWA_COND}
+	${OTAWA_KSEM}
 )
 
 
