@@ -712,7 +712,7 @@ public:
 	inline arm_decoder_t *decoder() const { return _decoder; }
 	inline void *platform(void) const { return _platform; }
 
-	virtual Option<Pair<cstring, int> > getSourceLine(Address addr) throw (UnsupportedFeatureException) {
+	virtual Option<Pair<cstring, int> > getSourceLine(Address addr) {
 		setup_debug();
 		if (!map)
 			return none;
@@ -723,7 +723,7 @@ public:
 		return some(pair(cstring(file), line));
 	}
 
-	virtual void getAddresses(cstring file, int line, Vector<Pair<Address, Address> >& addresses) throw (UnsupportedFeatureException) {
+	virtual void getAddresses(cstring file, int line, Vector<Pair<Address, Address> >& addresses) {
 		setup_debug();
 		addresses.clear();
 		if (!map)
