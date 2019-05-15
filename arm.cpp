@@ -962,7 +962,7 @@ BranchInst::kind_t BranchInst::kind(void) {
 		}
 
 		// mov lr, pc; mov pc, ri
-		else if(size() == 4 && prevInst()->topAddress() == address()) {
+		else if(size() == 4 && prevInst() != nullptr && prevInst()->topAddress() == address()) {
 
 			// get instruction words
 			t::uint32 cword, pword;
