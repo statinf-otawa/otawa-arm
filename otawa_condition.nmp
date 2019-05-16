@@ -52,3 +52,5 @@ extend	B_Cond,
 		MRC,
 		STC
 	otawa_condition = cond.otawa_condition
+
+// !!TODO!! For thumb.

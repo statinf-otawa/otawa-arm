@@ -76,7 +76,7 @@ MAKE_GLISS_FUNCTION(OTAWA_TARGET  "otawa_target"    "otawa_target.nmp" 		"${PROC
 MAKE_GLISS_PROCEDURE(OTAWA_SEM    "otawa_sem"       "otawa_sem.nmp"    		"${PROC_IRG}"   ";"         "${ARM_AUX}")
 MAKE_GLISS_PROCEDURE(OTAWA_KSEM   "otawa_ksem"      "otawa_ksem.nmp"   		"${PROC_IRG}"   ";"         "${ARM_AUX}")
 MAKE_GLISS_FUNCTION(OTAWA_MULTI   "otawa_multi"     "otawa_multi.nmp"  		"${PROC_IRG}"   "return 0;"	"${ARM_AUX}")
-MAKE_GLISS_FUNCTION(OTAWA_COND    "otawa_condition" "otawa_condition.nmp"   "${PROC_IRG}"   "return 0;"	"${ARM_AUX}")
+MAKE_GLISS_FUNCTION(OTAWA_COND    "otawa_condition" "otawa_condition.nmp"   "${PROC_IRG}"   "return 14;"	"${ARM_AUX}")
 
 set(SOURCES
 	"arm.cpp"
