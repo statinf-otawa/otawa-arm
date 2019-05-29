@@ -303,7 +303,7 @@ public:
 	virtual t::uint32 size() const { return _size; }
 	virtual Process &process() { return proc; }
 
-	virtual const elm::genstruct::Table<hard::Register *>& readRegs() {
+	virtual const Array<hard::Register *>& readRegs() override {
 		if (!isRegsDone) {
 			decodeRegs();
 			isRegsDone = true;
@@ -311,7 +311,7 @@ public:
 		return in_regs;
 	}
 
-	virtual const elm::genstruct::Table<hard::Register *>& writtenRegs() {
+	virtual const Array<hard::Register *>& writtenRegs() override {
 		if(!isRegsDone) {
 			decodeRegs();
 			isRegsDone = true;
@@ -330,8 +330,8 @@ protected:
 
 private:
 	void decodeRegs(void);
-	elm::genstruct::AllocatedTable<hard::Register *> in_regs;
-	elm::genstruct::AllocatedTable<hard::Register *> out_regs;
+	AllocArray<hard::Register *> in_regs;
+	AllocArray<hard::Register *> out_regs;
 	arm_address_t _addr;
 	bool isRegsDone;
 };
@@ -411,7 +411,8 @@ public:
 		argv(0),
 		envp(0),
 		no_stack(true),
-		init(false)
+		init(false),
+		io_man(nullptr)
 	{
 		ASSERTP(manager, "manager required");
 		ASSERTP(pf, "platform required");
@@ -616,8 +617,8 @@ public:
 
 	// internal work
 	void decodeRegs(Inst *oinst,
-		elm::genstruct::AllocatedTable<hard::Register *> *in,
-		elm::genstruct::AllocatedTable<hard::Register *> *out)
+		AllocArray<hard::Register *>& in,
+		AllocArray<hard::Register *>& out)
 	{
 		// Decode instruction
 		arm_inst_t *inst = decode_raw(oinst->address());
@@ -632,8 +633,8 @@ public:
 		arm_used_regs(inst, rds, wrs);
 
 		// convert registers to OTAWA
-		elm::genstruct::Vector<hard::Register *> reg_in;
-		elm::genstruct::Vector<hard::Register *> reg_out;
+		Vector<hard::Register *> reg_in;
+		Vector<hard::Register *> reg_out;
 		for (int i = 0; rds[i] != -1; i++ ) {
 			hard::Register *r = register_decoder[rds[i]];
 			if(r)
@@ -646,12 +647,12 @@ public:
 		}
 
 		// make the in and the out
-		in->allocate(reg_in.length());
+		in = AllocArray<hard::Register *>(reg_in.length());
 		for(int i = 0 ; i < reg_in.length(); i++)
-			in->set(i, reg_in.get(i));
-		out->allocate(reg_out.length());
+			in.set(i, reg_in.get(i));
+		out = AllocArray<hard::Register *>(reg_out.length());
 		for (int i = 0 ; i < reg_out.length(); i++)
-			out->set(i, reg_out.get(i));
+			out.set(i, reg_out.get(i));
 
 		// Free instruction
 		free_inst(inst);
@@ -870,8 +871,8 @@ void Inst::decodeRegs(void) {
 	// get register infos
 	arm_used_regs_read_t rds;
 	arm_used_regs_write_t wrs;
-	elm::genstruct::Vector<hard::Register *> reg_in;
-	elm::genstruct::Vector<hard::Register *> reg_out;
+	Vector<hard::Register *> reg_in;
+	Vector<hard::Register *> reg_out;
 	arm_used_regs(inst, rds, wrs);
 	for (int i = 0; rds[i] != -1; i++ ) {
 		hard::Register *r = register_decoder[rds[i]];
@@ -885,10 +886,10 @@ void Inst::decodeRegs(void) {
 	}
 
 	// store results
-	in_regs.allocate(reg_in.length());
+	in_regs = AllocArray<hard::Register *>(reg_in.length());
 	for(int i = 0 ; i < reg_in.length(); i++)
 		in_regs.set(i, reg_in.get(i));
-	out_regs.allocate(reg_out.length());
+	out_regs = AllocArray<hard::Register *>(reg_out.length());
 	for (int i = 0 ; i < reg_out.length(); i++)
 		out_regs.set(i, reg_out.get(i));
 
