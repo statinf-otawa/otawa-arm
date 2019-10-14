@@ -36,7 +36,7 @@ extend B_thumb_T2
 	otawa_kind = IS_CONTROL
 	otawa_target = target
 
-extend B_T3_thumb2
+extend B_T3
 	otawa_kind =
 		if cond.value<3..1> == 0b111
 		then 0
@@ -46,7 +46,7 @@ extend B_T3_thumb2
 		endif
 	otawa_target = addr
 
-extend B_T4_thumb2
+extend B_T4
 	otawa_kind = IS_CONTROL
 	otawa_target = addr
 
