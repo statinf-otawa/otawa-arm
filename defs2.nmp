@@ -79,7 +79,7 @@ extend regShift
 	use_pc = r.use_pc
 
 extend rotatedImmediate
-	v = extu(v) >>> (extu(rotate) << 1)
+	imm = extu(v) >>> (extu(rotate) << 1)
 
 
 // condition extension

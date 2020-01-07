@@ -11,8 +11,8 @@ extend immShift
 	no_shift = shiftAmt == 0 && shiftKind != ROR
 	otawa_kind = if no_shift then 0 else IS_SHIFTED | IS_IMMEDIATE endif
 
-extend rotatedImmediate
-	no_shift = v == 0
+//extend rotatedImmediate
+//	no_shift = v == 0
 
 extend REG_LIST
 	has_pc = r & (1 << 15)

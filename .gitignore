@@ -1,0 +1,15 @@
+.cproject
+.project
+.settings
+CMakeCache.txt
+CMakeFiles
+Makefile
+arm.so
+cmake_install.cmake
+install_manifest.txt
+otawa_condition.h
+otawa_kind.h
+otawa_ksem.h
+otawa_multi.h
+otawa_sem.h
+otawa_target.h

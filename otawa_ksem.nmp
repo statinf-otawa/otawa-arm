@@ -15,7 +15,7 @@ extend ADD_shr
 extend ADD_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		add(rd.i, rn.i, t1);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
@@ -31,7 +31,7 @@ extend AND_shr
 extend AND_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		and(rd.i, rn.i, t1);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
@@ -55,7 +55,7 @@ extend BIC_shr
 extend BIC_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, ~shifter_operand.v);
+		seti(t1, ~shifter_operand.imm);
 		and(rd.i, rn.i, t1);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
@@ -77,7 +77,7 @@ extend CMN_shr
 extend CMN_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, -shifter_operand.v);
+		seti(t1, -shifter_operand.imm);
 		cmp(_CPSR, rn.i, t1);
 	}
 
@@ -91,7 +91,7 @@ extend CMP_shr
 extend CMP_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		cmp(_CPSR, rn.i, t1);
 	}
 
@@ -106,7 +106,7 @@ extend EOR_shr
 extend EOR_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		xor(rd.i, rn.i, t1);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
@@ -296,7 +296,7 @@ extend MOV_shr
 
 extend MOV_imm
 	otawa_ksem = {
-		seti(rd.i, shifter_operand.v);
+		seti(rd.i, shifter_operand.imm);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
 
@@ -325,7 +325,7 @@ extend MVN_shr
 
 extend MVN_imm
 	otawa_ksem = {
-		seti(rd.i, ~shifter_operand.v);
+		seti(rd.i, ~shifter_operand.imm);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
 
@@ -340,7 +340,7 @@ extend ORR_shr
 extend ORR_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		or(rd.i, rn.i, t1);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
@@ -356,7 +356,7 @@ extend RSB_shr
 extend RSB_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		sub(rd.i, t1, rn.i);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
@@ -465,7 +465,7 @@ extend SUB_shr
 extend SUB_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		sub(rd.i, rn.i, t1);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
@@ -494,7 +494,7 @@ extend TEQ_shr
 extend TEQ_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		xor(t1, rn.i, t1);
 		seti(t2, 0);
 		cmp(_CPSR, t1, t2);
@@ -512,7 +512,7 @@ extend TST_shr
 extend TST_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-		seti(t1, shifter_operand.v);
+		seti(t1, shifter_operand.imm);
 		and(t1, rn.i, t1);
 		seti(t2, 0);
 		cmp(_CPSR, t1, t2);
