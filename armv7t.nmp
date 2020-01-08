@@ -167,6 +167,15 @@ extend STC_thumb2
 		| IS_INT
 		| IS_STORE
 
+extend
+	MOVW_imm, MOV_imm_T3,
+	MOVT, MOVT_T1
+	otawa_kind = IS_INT | IS_ALU
+
+extend MLS, MLS_thumb2
+	otawa_kind = IS_INT | IS_ALU | IS_MUL
+	
+
 
 // FP instructions
 extend
