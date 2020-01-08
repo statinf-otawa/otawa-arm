@@ -187,7 +187,9 @@ extend
 	VADD_thumb, VCVT_thumb, VMOV_thumb,VSUB_thumb_fp, VMRS_T1
 	otawa_kind = IS_FLOAT | IS_ALU
 
-extend VMLA_arm, VMUL_arm, VMLA_thumb, VMUL_thumb
+extend
+	VMLA_arm, VMUL_arm, VMLA_thumb, VMUL_thumb,
+	VNMLA_VNMLS_A1
 	otawa_kind = IS_FLOAT | IS_ALU | IS_MUL
 
 extend VDIV_arm, VDIV_thumb
