@@ -167,3 +167,27 @@ extend STC_thumb2
 		| IS_INT
 		| IS_STORE
 
+
+// FP instructions
+extend
+	VADD_arm, VCVT_arm, VMOV_arm, VSUB_arm_fp, VMRS_A1,
+	VADD_thumb, VCVT_thumb, VMOV_thumb,VSUB_thumb_fp, VMRS_T1
+	otawa_kind = IS_FLOAT | IS_ALU
+
+extend VMLA_arm, VMUL_arm, VMLA_thumb, VMUL_thumb
+	otawa_kind = IS_FLOAT | IS_ALU | IS_MUL
+
+extend VDIV_arm, VDIV_thumb
+	otawa_kind = IS_FLOAT | IS_ALU | IS_DIV
+
+extend VLDR_arm, VLDR_thumb
+	otawa_kind = IS_FLOAT | IS_MEM | IS_LOAD
+
+extend VLDM_arm, VPOP_thumb
+	otawa_kind = IS_FLOAT | IS_MEM | IS_LOAD | IS_MULTI
+
+extend VSTR_arm, VSTR_thumb
+	otawa_kind = IS_FLOAT | IS_MEM | IS_STORE
+
+extend VSTM_arm, VPUSH_thumb
+	otawa_kind = IS_FLOAT | IS_MEM | IS_LOAD | IS_STORE
