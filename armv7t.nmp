@@ -174,7 +174,11 @@ extend
 
 extend MLS, MLS_thumb2
 	otawa_kind = IS_INT | IS_ALU | IS_MUL
-	
+
+extend
+	UBFX, UBFX_T1,
+	UXTB_A1, UXTB_T1, UXTAB_T1
+	otawa_kind = IS_INT | IS_ALU
 
 
 // FP instructions
