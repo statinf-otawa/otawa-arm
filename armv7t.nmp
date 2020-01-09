@@ -2,6 +2,14 @@ include "defs.nmp"
 include "defs2.nmp"
 
 let ARMV7T = 1
+macro is_cond = \
+	(if cond.value == 14 then 0 else IS_COND endif)
+macro is_control(r) = \
+	(if r.number == 15 then IS_CONTROL else 0 endif)
+macro is_mem_control(r, b) = \
+	is_control(r)|\
+	(if r.number == 15 && b.number == 13 then IS_CONTROL|IS_RETURN else 0 endif)
+
 
 // condition extension
 extend full_condition
@@ -23,6 +31,11 @@ extend full_condition
 	}
 	otawa_condition = cond<3..0>
 
+extend
+	B_T3
+		otawa_condition = cond.otawa_condition
+	
+
 extend condition
 	otawa_ever = value == 14
 	otawa_never = value == 15
@@ -42,26 +55,35 @@ extend condition
 	}
 	otawa_condition = cond<3..0>
 
+extend
+	BLX_ARM,
+	LDREX_A1, LDREXB_A1, LDREXD_A1, LDREXH_A1,
+	MLS, MOVW_imm, MOVT,
+	STRD_imm, STRD_reg_A1,
+	STREX_A1, STREXB_A1, STREXD_A1, STREXH_A1,
+	UBFX, UXTB_A1,
+	VNMLA_VNMLS_A1, VMRS_A1
+		otawa_condition = cond.otawa_condition
+
+
 extend RegisterListThumb
 	has_pc = _P
+
 
 // included here for ascending compatibility
 extend B_Cond
 	otawa_target = target
 
+
+// branches
 extend B_thumb_T2
 	otawa_kind = IS_CONTROL
 	otawa_target = target
 
 extend B_T3
-	otawa_kind =
-		if cond.value<3..1> == 0b111
-		then 0
-		else
-			IS_CONTROL
-			| (if cond.value == 14 then 0 else IS_COND endif)
-		endif
+	otawa_kind = IS_CONTROL | is_cond
 	otawa_target = addr
+	otawa_cond = cond.otawa_cond
 
 extend B_T4
 	otawa_kind = IS_CONTROL
@@ -76,10 +98,10 @@ extend BLX_imm_T2
 	otawa_target = targetAddress
 
 extend BLX_ARM
-	otawa_kind = IS_CONTROL | IS_CALL
-		| (if cond.value == 14 then 0 else IS_COND endif)
+	otawa_kind = IS_CONTROL | IS_CALL | is_cond
 
 extend CBNZ_CBZ_thumb
+	otawa_kind = IS_CONTROL | IS_COND
 	otawa_target = target
 	otawa_sem = {
 		if nonzero ^ (R(rn) == 0) then
@@ -87,29 +109,21 @@ extend CBNZ_CBZ_thumb
 		endif;
 	}
 
-
 extend TBB_TBH
 	otawa_kind = IS_CONTROL | IS_MEM | IS_LOAD
 	otawa_target = 0
-
-extend CBNZ_CBZ_thumb
-	otawa_kind = IS_CONTROL | IS_COND
 
 extend LDR_imm_T3, LDR_imm_T4
  	otawa_kind =
  		  IS_MEM
  		| IS_INT
  		| IS_LOAD
- 		| (if Rt.number == 15 then IS_CONTROL else 0 endif)
- 		| (if Rt.number == 15 && Rn.number == 13 then IS_RETURN else 0 endif)
+ 		| is_mem_control(Rt, Rn)
 
-extend BLX_ARM, LDREX_A1, LDREXB_A1, LDREXD_A1, LDREXH_A1, MOVW_imm, MOVT, STRD_imm, STREX_A1, STREXB_A1, STREXD_A1, STREXH_A1
-	otawa_condition = cond.otawa_condition
-	
 extend LDM_T2
 	otawa_kind = IS_MEM | IS_LOAD | IS_MULTI | IS_INT
 		| (if register_list.has_pc then IS_CONTROL else 0 endif)
-		| (if Rn.number == 13 && register_list.has_pc then IS_CONTROL | IS_RETURN else 0 endif)
+		| (if Rn.number == 13 && register_list.has_pc then IS_CONTROL|IS_RETURN else 0 endif)
 	otawa_sem = {
 		if Rn.use_pc || register_list<15..15> == 1 then seti(R(15), __IADDR + 8); endif;
 		cnt = 0;
@@ -149,59 +163,68 @@ extend STMDB_T1
 
 extend RSB_imm_T2
 	otawa_kind =
-		  IS_ALU
-		| IS_INT
-		| (if Rd.number == 15 then IS_CONTROL else 0 endif)
-		| IS_IMMEDIATE
+		  IS_ALU| IS_INT | is_control(Rd) | IS_IMMEDIATE
 	otawa_target =
-		if Rn.number == 15 then __IADDR + 4 - imm32
-		else 0 endif
+		if Rn.number == 15 then __IADDR + 4 - imm32 else 0 endif
 
 extend LDC_thumb2
-	otawa_kind = IS_MEM
-		| IS_INT
-		| IS_LOAD
+	otawa_kind = IS_MEM | IS_INT | IS_LOAD
 
 extend STC_thumb2
-	otawa_kind = IS_MEM
-		| IS_INT
-		| IS_STORE
+	otawa_kind = IS_MEM | IS_INT | IS_STORE
 
 extend
 	MOVW_imm, MOV_imm_T3,
 	MOVT, MOVT_T1
 	otawa_kind = IS_INT | IS_ALU
 
-extend MLS, MLS_thumb2
+extend MLS
+	otawa_kind = IS_INT | IS_ALU | IS_MUL | is_cond
+
+extend MLS_thumb2
 	otawa_kind = IS_INT | IS_ALU | IS_MUL
 
-extend
-	UBFX, UBFX_T1,
-	UXTB_A1, UXTB_T1, UXTAB_T1
+extend UBFX, UXTB_A1
+	otawa_kind = IS_INT | IS_ALU | is_cond
+
+extend UBFX_T1, UXTB_T1, UXTAB_T1
 	otawa_kind = IS_INT | IS_ALU
+
+extend STRD_imm, STRD_reg_A1
+	otawa_kind = IS_INT | IS_MEM | IS_STORE | is_cond
 
 
 // FP instructions
+extend VMRS_A1
+	otawa_kind = IS_FLOAT | IS_ALU | is_cond
+
 extend
-	VADD_arm, VCVT_arm, VMOV_arm, VSUB_arm_fp, VMRS_A1,
+	VADD_arm, VCVT_arm, VMOV_arm, VSUB_arm_fp,
 	VADD_thumb, VCVT_thumb, VMOV_thumb,VSUB_thumb_fp, VMRS_T1
 	otawa_kind = IS_FLOAT | IS_ALU
 
-extend
-	VMLA_arm, VMUL_arm, VMLA_thumb, VMUL_thumb,
-	VNMLA_VNMLS_A1
+extend VNMLA_VNMLS_A1
+	otawa_kind = IS_FLOAT | IS_ALU | IS_MUL | is_cond
+
+extend VMLA_arm, VMLA_thumb, VMUL_arm, VMUL_thumb
 	otawa_kind = IS_FLOAT | IS_ALU | IS_MUL
 
 extend VDIV_arm, VDIV_thumb
 	otawa_kind = IS_FLOAT | IS_ALU | IS_DIV
 
-extend VLDR_arm, VLDR_thumb
+extend VLDR_arm
+	otawa_kind = IS_FLOAT | IS_MEM | IS_LOAD //| is_cond
+
+extend VLDR_thumb
 	otawa_kind = IS_FLOAT | IS_MEM | IS_LOAD
 
 extend VLDM_arm, VPOP_thumb
 	otawa_kind = IS_FLOAT | IS_MEM | IS_LOAD | IS_MULTI
 
-extend VSTR_arm, VSTR_thumb
+extend VSTR_arm
+	otawa_kind = IS_FLOAT | IS_MEM | IS_STORE //| is_cond
+
+extend VSTR_thumb
 	otawa_kind = IS_FLOAT | IS_MEM | IS_STORE
 
 extend VSTM_arm, VPUSH_thumb
