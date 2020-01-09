@@ -228,4 +228,4 @@ extend VSTR_thumb
 	otawa_kind = IS_FLOAT | IS_MEM | IS_STORE
 
 extend VSTM_arm, VPUSH_thumb
-	otawa_kind = IS_FLOAT | IS_MEM | IS_LOAD | IS_STORE
+	otawa_kind = IS_FLOAT | IS_MEM | IS_STORE
