@@ -288,6 +288,26 @@ class Process;
 
 #include "otawa_condition.h"
 
+/* IT support
+ *
+ * Mask		# conditional instructions
+ * 1000		0
+ * X100		1
+ * XX10		2
+ * XXX1		3
+ *
+ * condition instruction i (in [0, 2]):
+ * 	firstcond<3..1>
+ * 	firscond<0..0> = firscond<0..0> ^ mask<3-i>
+ *
+ * cond		Condition
+ * 0000		EQ
+ * 0001		NE
+ * 0010		HS
+ * 0011		LO
+ * 0100		...
+ */
+
 // Inst class
 class Inst: public otawa::Inst {
 public:
@@ -345,8 +365,8 @@ public:
 		: Inst(process, kind & ~IS_CONTROL, addr, size), _target(0), isTargetDone(false)
 		{ }
 
-	virtual otawa::Inst *target();
-	virtual kind_t kind(void);
+	otawa::Inst *target() override;
+	kind_t kind() override;
 
 protected:
 	arm_address_t decodeTargetAddress(void);
@@ -357,9 +377,65 @@ private:
 };
 
 
+// ITInst class
+class ITInst: public otawa::Inst {
+public:
+	ITInst(otawa::Inst *inst, int cond): i(inst), c(cond) { }
+
+	kind_t kind() override { return i->kind() | IS_COND; }
+	otawa::Inst *target() override { return i->target(); }
+
+	void dump(io::Output& out) override {
+		static cstring conds[16] = {
+			"EQ", "NE", "HS", "LO",
+			"MI", "PL", "VS", "VC"
+			"HI", "LS", "GE", "LT",
+			"GT", "LE", "AL", "NV"
+		};
+		i->dump(out);
+		out << "(" << conds[c] << ")";
+	}
+
+	address_t address() const override { return i->address(); }
+	t::uint32 size() const override { return i->size(); }
+
+	const Array<hard::Register *>& readRegs() override
+		{ return i->readRegs(); }
+
+	const Array<hard::Register *>& writtenRegs() override
+		{ return i->writtenRegs(); }
+
+	void semInsts(sem::Block &block) override {
+		block.add(sem::_if(0, 0, 0));
+		i->semKernel(block);
+		block[0] = sem::_if(sem_conds[c], sr.platformNumber(), block.length());
+	}
+
+	void semKernel(sem::Block &block) override
+		{ i->semKernel(block); }
+
+	Condition condition() override {
+		return Condition(sem_conds[c], &sr);
+	}
+
+private:
+	otawa::Inst *i;
+	int c;
+	static sem::cond_t sem_conds[16];
+};
+
+sem::cond_t ITInst::sem_conds[16] = {
+	sem::EQ, sem::NE, sem::UGE, sem::ULT,
+	sem::ANY_COND, sem::ANY_COND, sem::ANY_COND, sem::ANY_COND,
+	sem::UGT, sem::ULE, sem::GE, sem::LT,
+	sem::GT, sem::LE, sem::ANY_COND, sem::ANY_COND
+};
+
 
 /****** Segment class ******/
+class Process;
 class Segment: public otawa::Segment {
+	friend class Process;
 public:
 	Segment(Process& process,
 		CString name,
@@ -499,7 +575,7 @@ public:
 			genv.flags = GEL_ENV_NO_STACK;
 
 		// build the GEL image
-		_file = gel_open(&path, NULL, GEL_OPEN_QUIET);
+		_file = gel_open(path.chars(), NULL, GEL_OPEN_QUIET);
 		if(!_file)
 			throw LoadException(_ << "cannot load \"" << path << "\": " << gel_strerror());
 		gel_image_t *gimage = gel_image_load(_file, &genv, 0);
@@ -658,11 +734,30 @@ public:
 		free_inst(inst);
 	}
 
-	otawa::Inst *decode(Address addr) {
+	/**
+	 * Build instructions depending on the IT.
+	 * @param i				IT instruction itself.
+	 * @param firstcond		firstcond field of IT.
+	 * @param mask			mask field of IT.
+	 * @param seg			Container segment of these instructions.
+	 */
+	void makeIT(Inst *i, t::uint8 firstcond, t::uint8 mask, Segment *seg) {
+		do {
+			otawa::Inst *n = decode(i->topAddress(), seg);
+			otawa::Inst *i = new ITInst(n, firstcond ^ ((~mask >> 3) & 0b1));
+			seg->insert(i);
+			mask <<= 1;
+		} while(mask != 0);
+	}
+
+
+	otawa::Inst *decode(Address addr, Segment *seg) {
+
+		// get kind
 		arm_inst_t *inst = decode_raw(addr);
-		Inst::kind_t kind = 0;
-		otawa::Inst *result = 0;
-		kind = arm_kind(inst);
+		Inst::kind_t kind = arm_kind(inst);
+
+		// compute size
 		int size;
 		if(inst->ident != 0)
 			size = arm_get_inst_size(inst) >> 3;
@@ -670,23 +765,32 @@ public:
 			size = 2;
 		else
 			size = 4;
+
+		// build the instruction
+		Inst *i;
 		if(kind & Inst::IS_CONTROL)
-			result = new BranchInst(*this, kind, addr, size);
+			i = new BranchInst(*this, kind, addr, size);
 		else
-			result = new Inst(*this, kind, addr, size);
-		ASSERT(result);
+			i = new Inst(*this, kind, addr, size);
+
+		// compute multiple register load/store information
 		t::uint16 multi = arm_multi(inst);
 		if(multi)
-			otawa::arm::NUM_REGS_LOAD_STORE(result) = elm::ones(multi);
-		char buf[256];
-		arm_disasm(buf, inst);
-		t::uint8 b0, b1;
-		get(addr, b0);
-		get(addr + 1, b1);
-		free_inst(inst);
-		return result;
-	}
+			otawa::arm::NUM_REGS_LOAD_STORE(i) = elm::ones(multi);
 
+		// special processing for IT
+		/* TO TEST
+		if(inst->ident == ARM_YIELDS) {
+			t::uint8 firstcond = ARM_YIELDS_i_x_firstcond;
+			t::uint8 mask = ARM_YIELDS_i_x_mask;
+			if(mask != 0)
+				makeIT(i, firstcond, mask, seg);
+		}*/
+
+		// cleanup and return
+		free_inst(inst);
+		return i;
+	}
 
 	// GLISS2 ARM access
 	inline int opcode(Inst *inst) const {
@@ -993,7 +1097,7 @@ otawa::Inst *BranchInst::target() {
 
 
 otawa::Inst *Segment::decode(address_t address) {
-	return proc.decode(address);
+	return proc.decode(address, this);
 }
 
 
