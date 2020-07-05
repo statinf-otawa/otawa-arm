@@ -829,6 +829,34 @@ extend LDR_shr_thumb
 extend LDR_imm2_thumb
 	otawa_sem = { seti(t1, __IADDR + 8 + imm * 4); load(rd.i, t1, UINT32); }
 
+extend LDR_imm_T3
+	otawa_sem = {
+		seti(t1, coerce(int(32), imm12));
+		add(t1, t1, R(Rn.i));
+		load(R(Rt.i), t1, UINT32);
+		if Rt.i == 15 then
+			_branch(R(Rt.i));
+		endif;
+	}
+
+extend LDR_imm_T4
+	otawa_sem = {
+		seti(t1, coerce(int(32), imm8));
+		if U then
+			add(t1, R(Rn.i), t1);
+		else
+			sub(t1, R(Rn.i), t1);
+		endif;
+		load(R(Rt.i), t1, UINT32);
+		if W then
+			_set(R(Rn.i), t1);
+			if Rn.i == 15 then _branch(t1); endif;
+		endif;
+		if Rt.i == 15 then
+			_branch(R(Rt.i));
+		endif;
+	}
+
 extend LDR_imm3_thumb
 	otawa_sem = { seti(t1, exts(imm) * 4); add(t1, R(13), t1); load(rd.i, t1, UINT32); }
 
@@ -873,6 +901,16 @@ extend MOV_shr2_thumb
 
 extend MUL_thumb
 	otawa_sem = { mul(rd.i, rd.i, rm.i); scratch(_CPSR); }
+
+extend MLA_MUL_thumb2
+	otawa_sem = {
+		if ra.i == 0b1111 then
+			mul(R(rd.i), R(rn.i), R(rm.i));
+		else
+			mul(t2, R(rn.i), R(rm.i));
+			add(R(rd.i), t2, R(ra.i));
+		endif;
+	}
 
 extend MVN_thumb
 	otawa_sem = { not(rd.i, rm.i); scratch(_CPSR); }
@@ -926,6 +964,60 @@ extend PUSH_thumb
 		endif;
 	}
 
+extend STR_imm_thumb
+	otawa_sem = {
+		seti(t1, coerce(card(32), imm) << 2);
+		add(t1, t1, R(rn.i));
+		store(R(rd.i), t1, UINT32);
+	}
+
+extend SUB_imm1_thumb
+	otawa_sem = {
+		seti(t1, imm);
+		sub(R(rd.i), R(rn.i), t1);
+		scratch(_CPSR);
+	}
+
+extend SUB_imm2_thumb
+	otawa_sem = {
+		seti(t1, imm);
+		sub(R(rd.i), R(rd.i), t1);
+		scratch(_CPSR);
+	}
+
+extend SUB_imm3_thumb
+	otawa_sem = {
+		seti(t1, imm);
+		sub(R(13), R(13), t1);
+		scratch(_CPSR);		
+	}
+
+extend SUB_reg_thumb
+	otawa_sem = {
+		sub(R(rd.i), R(rm.i), R(rn.i));
+		scratch(_CPSR);
+	}
+
+extend UXTAB16_UXTB16_thumb2
+	otawa_sem = {
+		scratch(R(rd.i));
+	}
+
+extend UXTB_T1
+	otawa_sem= {
+		seti(t1, 0xff);
+		and(R(Rd), R(Rm), t1);
+	}
+
+
+extend UXTAB_T1
+	action = {
+		seti(t1, rotate::0b000);
+		shr(t1, R(Rm.i), t1);
+		seti(t2, 0xff);
+		and(t1, t1, t2);
+		add(R(Rd.i), R(Rn.i), t1);
+	}
 
 // ****** unsupported ******
 
