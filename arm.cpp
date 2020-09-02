@@ -741,13 +741,13 @@ public:
 	 * @param mask			mask field of IT.
 	 * @param seg			Container segment of these instructions.
 	 */
-	void makeIT(Inst *i, t::uint8 firstcond, t::uint8 mask, Segment *seg) {
+	void makeIT(otawa::Inst *i, t::uint8 firstcond, t::uint8 mask, Segment *seg) {
 		do {
 			otawa::Inst *n = decode(i->topAddress(), seg);
-			otawa::Inst *i = new ITInst(n, firstcond ^ ((~mask >> 3) & 0b1));
+			i = new ITInst(n, firstcond ^ ((~mask >> 3) & 0b1));
 			seg->insert(i);
 			mask <<= 1;
-		} while(mask != 0);
+		} while((mask & 0xf) != 0);
 	}
 
 
@@ -779,13 +779,13 @@ public:
 			otawa::arm::NUM_REGS_LOAD_STORE(i) = elm::ones(multi);
 
 		// special processing for IT
-		/* TO TEST
+		// TO TEST
 		if(inst->ident == ARM_YIELDS) {
 			t::uint8 firstcond = ARM_YIELDS_i_x_firstcond;
 			t::uint8 mask = ARM_YIELDS_i_x_mask;
 			if(mask != 0)
 				makeIT(i, firstcond, mask, seg);
-		}*/
+		}
 
 		// cleanup and return
 		free_inst(inst);
