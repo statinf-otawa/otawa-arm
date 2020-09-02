@@ -1109,6 +1109,7 @@ void Inst::semInsts (sem::Block &block) {
 	arm_inst_t *inst = proc.decode_raw(address());
 	if(inst->ident == ARM_UNKNOWN)
 		return;
+	block.add(sem::seti(15, address().offset()));
 	arm_sem(inst, block);
 	arm_free_inst(inst);
 
@@ -1127,6 +1128,7 @@ void Inst::semKernel(sem::Block &block) {
 	arm_inst_t *inst = proc.decode_raw(address());
 	if(inst->ident == ARM_UNKNOWN)
 		return;
+	block.add(sem::seti(15, address().offset()));
 	arm_ksem(inst, block);
 	arm_free_inst(inst);
 }
