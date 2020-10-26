@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+project(otawa-arm)
 
 # ppc2 plugin build
 set(PROC 			"arm")
@@ -44,9 +45,19 @@ if(NOT OTAWA_CONFIG)
     find_program(OTAWA_CONFIG otawa-config DOC "path to otawa-config")
     if(NOT OTAWA_CONFIG)
         message(FATAL_ERROR "ERROR: otawa-config is required !")
+    else()
+	message(STATUS "otawa-config found at ${OTAWA_CONFIG}")
+    endif()
+
+else()
+    find_program(OTAWA_CONFIG_GIVEN otawa-config OTAWA_CONFIG)
+    if(NOT OTAWA_CONFIG_GIVEN)
+	message(FATAL_ERROR "No otawa-config found at given path: ${OTAWA_CONFIG}")
+    else()
+	message(STATUS "Using otawa-config found nearly to the giving path: ${OTAWA_CONFIG_GIVEN}")
+	set(OTAWA_CONFIG "${OTAWA_CONFIG_GIVEN}")
     endif()
 endif()
-message(STATUS "otawa-config found at ${OTAWA_CONFIG}")
 
 
 # get OTAWA configuration
