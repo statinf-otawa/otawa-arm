@@ -1066,7 +1066,7 @@ BranchInst::kind_t BranchInst::kind(void) {
 				_kind |= IS_RETURN;
 		}
 
-		// mov lr, pc; mov pc, ri
+		// ARM mode
 		else if(size() == 4 && prevInst() != nullptr && prevInst()->topAddress() == address()) {
 
 			// get instruction words
@@ -1074,10 +1074,11 @@ BranchInst::kind_t BranchInst::kind(void) {
 			process().get(address(), cword);
 			process().get(prevInst()->address(), pword);
 
-			// check instructions
+			// mov lr, pc; mov pc, ri or bx ...
 			if((pword & 0x0fffffff) == 0x01a0e00f				// mov pc, lr
 			&& (pword & 0xf0000000) == (cword & 0xf0000000)		// same condition
-			&& (cword & 0x0ffff000) == 0x01a0f000)
+			// mov pc, ri or bx...
+			&& ((cword & 0x0ffff000) == 0x01a0f000 || ((cword & 0x0ff000f0) == 0x01200010)))
 				_kind |= IS_CALL;
 		}
 

@@ -13,3 +13,5 @@ otawa_ksem.h
 otawa_multi.h
 otawa_sem.h
 otawa_target.h
+.kdev4/
+otawa-arm.kdev4
