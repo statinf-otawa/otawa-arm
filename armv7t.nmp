@@ -34,7 +34,7 @@ extend full_condition
 extend
 	B_T3
 		otawa_condition = cond.otawa_condition
-	
+
 
 extend condition
 	otawa_ever = value == 14
@@ -81,10 +81,26 @@ extend B_thumb_T2
 	otawa_target = target
 
 extend B_T3
-	otawa_kind = IS_CONTROL | is_cond
+	//otawa_kind = IS_CONTROL | is_cond
 	otawa_target = addr
 	otawa_cond = cond.otawa_cond
+	otawa_kind =
+		if (S == 0b0) && (cond.value == 0b1111) && (imm6 == 0b101111) && (j1 == 0b0) then
+			IS_INTERN
+		else if (S == 0b0) && (cond.value == 0b1110) && (imm6<5..4> == 0b00) && (j1 == 0b0) && (imm11<9..8> == 0b00) then
+			IS_INTERN
+		else if (cond.value == 0b1110) && (imm6<5..4> == 0b10) && (imm11<10..8> == 0b000) then
+			if imm11<4..0> == 0 then IS_ALU else IS_INTERN endif
+		else if (cond.value == 0b1110) && (imm6<5..4> == 0b11) then
+			IS_INTERN
+		else
+			IS_CONTROL
+		endif
+		endif
+		endif
+		endif
 
+	
 extend B_T4
 	otawa_kind = IS_CONTROL
 	otawa_target = addr

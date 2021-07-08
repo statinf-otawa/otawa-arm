@@ -487,8 +487,10 @@ public:
 		argv(0),
 		envp(0),
 		no_stack(true),
-		init(false),
-		io_man(nullptr)
+		init(false)
+#		ifdef ARM_MEM_IO
+			, io_man(nullptr)
+#		endif
 	{
 		ASSERTP(manager, "manager required");
 		ASSERTP(pf, "platform required");
