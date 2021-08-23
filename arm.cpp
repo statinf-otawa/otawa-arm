@@ -339,10 +339,12 @@ public:
 		return out_regs;
 	}
 
-	virtual void semInsts(sem::Block &block);
-	virtual void semKernel(sem::Block &block);
-	virtual Condition condition(void);
+	void semInsts(sem::Block &block) override;
+	void semKernel(sem::Block &block) override;
+	Condition condition() override;
 
+	int multiCount() override { return otawa::arm::NUM_REGS_LOAD_STORE(this); }
+	
 protected:
 	Process &proc;
 	kind_t _kind;

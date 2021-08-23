@@ -1,5 +1,6 @@
-extend LDM, STM
-	otawa_multi = reglist 
 
-extend LDMIA_thumb
+extend LDM, STM
+	otawa_multi = reglist
+
+extend LDMIA_thumb, STMIA_thumb
 	otawa_multi = llist
