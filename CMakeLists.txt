@@ -95,7 +95,7 @@ set(ORIGIN $ORIGIN)
 add_library(${PROC} SHARED ${SOURCES})
 set_property(TARGET ${PROC} PROPERTY PREFIX "")
 set_property(TARGET ${PROC} PROPERTY COMPILE_FLAGS "${OTAWA_CFLAGS}")
-target_link_libraries(${PROC} "${OTAWA_LDFLAGS} -Wl,-rpath -Wl,${ORIGIN}/../.. ${PROC_LIB}")
+target_link_libraries(${PROC} "${OTAWA_LDFLAGS} -Wl,-rpath -Wl,${ORIGIN}/../.. '${PROC_LIB}'")
 
 
 # installation
