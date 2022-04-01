@@ -93,7 +93,7 @@ extend B_T3
 		else if (cond.value == 0b1110) && (imm6<5..4> == 0b11) then
 			IS_INTERN
 		else 
-            if cond.value<2..0> == 0b111 then IS_CONTROL else IS_CONTROL | IS_COND endif
+            IS_CONTROL | IS_COND
 		endif
 		endif
 		endif
