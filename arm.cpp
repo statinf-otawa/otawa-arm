@@ -33,6 +33,7 @@
 #include <otawa/proc/ProcessorPlugin.h>
 #include <otawa/prog/Loader.h>
 #include <otawa/prog/sem.h>
+#include <otawa/prog/features.h>
 #include <otawa/program.h>
 
 extern "C" {
@@ -534,6 +535,7 @@ public:
 		provide(REGISTER_USAGE_FEATURE);
 		provide(MEMORY_ACCESSES);
 		provide(CONDITIONAL_INSTRUCTIONS_FEATURE);
+		provide(SEMANTICS_INFO);
 		Info::ID(this) = this;
 	}
 
