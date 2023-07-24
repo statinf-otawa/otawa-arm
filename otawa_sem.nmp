@@ -725,10 +725,10 @@ extend ADD_imm3_thumb
 	otawa_sem = { seti(rd.i, ((__IADDR + 4) & 0xfffffffc) + exts(imm) << 2); }
 
 extend ADD_imm4_thumb
-	otawa_sem = { add(rd.i, R(13), exts(imm) << 2); }
+	otawa_sem = { seti(t1, exts(imm) << 2); add(rd.i, R(13), t1); }
 
 extend ADD_imm5_thumb
-	otawa_sem = { add(R(13), R(13), exts(imm) << 2); }
+	otawa_sem = { seti(t1, exts(imm) << 2); add(R(13), R(13), t1); }
 
 extend ADD_reg1_thumb
 	otawa_sem = { add(rd.i, rm.i, rn.i); scratch(_CPSR); }
@@ -767,6 +767,12 @@ extend B_thumb
 			_if(otawa_cond(cond), _CPSR, 1);
 			_branch(t1);
 		endif; endif;
+	}
+
+extend B_thumb_T2
+	otawa_sem = {
+		seti(t1, target);
+		_branch(t1);
 	}
 
 extend BIC_thumb
@@ -987,7 +993,7 @@ extend SUB_imm2_thumb
 
 extend SUB_imm3_thumb
 	otawa_sem = {
-		seti(t1, imm);
+		seti(t1, imm << 2);
 		sub(R(13), R(13), t1);
 		scratch(_CPSR);		
 	}

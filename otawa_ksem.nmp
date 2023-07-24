@@ -8,7 +8,7 @@ extend ADD_shr
 	otawa_ksem = {
 		if shifter_operand.use_pc || rn.use_pc then seti(R(15), __IADDR + 8); endif;
 		shifter_operand.otawa_sem;
-		add(rd.i, rn.i, t1);
+		add(R(rd.i), R(rn.i), t1);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
 
@@ -16,7 +16,7 @@ extend ADD_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
 		seti(t1, shifter_operand.imm);
-		add(rd.i, rn.i, t1);
+		add(R(rd.i), R(rn.i), t1);
 		if sets then seti(t1, 0); cmp(_CPSR, rd.i, t1); endif;
 	}
 
@@ -63,7 +63,7 @@ extend BIC_imm
 extend BX_ARM
 	otawa_ksem = {
 		if rd.use_pc then seti(R(15), __IADDR + 8); endif;
-		_branch(rd.i);
+		_branch(R(rd.i));
 	}
 
 extend CMN_shr
@@ -129,7 +129,7 @@ extend LDM
 			seti(t1, cnt * 4); sub(t1, rn.i, t1);
 			_set(t3, t1);
 		case MULT_IB:	add(t1, rn.i, t2);
-			add(t1, rn.i, t2);
+			add(t1, R(rn.i), t2);
 			seti(t3, cnt * 4 - 4); add(t3, t1, t3);
 		};
 		ii = 0;
@@ -173,7 +173,7 @@ extend LDR_imm
 	otawa_ksem = {
 		if rn.use_pc then seti(R(15), __IADDR + 8); endif;
 		seti(t2, if setu == 0 then -coerce(card(32), offset12) else offset12 endif);
-		if setpre == 0 then _set(t1, rn.i); else add(t1, rn.i, t2); endif;
+		if setpre == 0 then _set(t1, R(rn.i)); else add(t1, R(rn.i), t2); endif;
 		load(rd.i, t1, if setb then UINT8 else UINT32 endif);
 		if setpre == 0 then 	add(rn.i, t1, t2);
 		else if setw == 1 then	_set(rn.i, t1);
@@ -539,10 +539,10 @@ extend ADD_imm3_thumb
 	otawa_ksem = { seti(rd.i, ((__IADDR + 4) & 0xfffffffc) + exts(imm) << 2); }
 
 extend ADD_imm4_thumb
-	otawa_ksem = { add(rd.i, R(13), exts(imm) << 2); }
+	otawa_ksem = { seti(t1, exts(imm) << 2); add(rd.i, R(13), t1); }
 
 extend ADD_imm5_thumb
-	otawa_ksem = { add(R(13), R(13), exts(imm) << 2); }
+	otawa_ksem = { seti(t1, exts(imm) << 2); add(R(13), R(13), t1); }
 
 extend ADD_reg1_thumb
 	otawa_ksem = { add(rd.i, rm.i, rn.i); scratch(_CPSR); }
@@ -581,6 +581,12 @@ extend B_thumb
 			_if(otawa_cond(cond), _CPSR, 1);
 			_branch(t1);
 		endif; endif;
+	}
+
+extend B_thumb_T2
+	otawa_ksem = {
+		seti(t1, target);
+		_branch(t1);
 	}
 
 extend BIC_thumb
