@@ -1,5 +1,7 @@
 include "defs.nmp"
 
+macro u32(x) = coerce(card(32), x)
+
 var sem_rec_first[1, s32]
 
 macro if_cond = \
@@ -323,7 +325,7 @@ extend LDRH_imm
 	otawa_sem = {
 		if_cond_load
 			if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-			seti(t2, if setu == 0 then -(immh::imml) else (immh::imml) endif);
+			seti(t2, if setu == 0 then -u32(immh::imml) else (immh::imml) endif);
 			if setpre == 0 then _set(t1, rn.i); else add(t1, rn.i, t2); endif;
 			load(rd.i, t1, UINT16);
 			if setpre == 0 then add(rn.i, rn.i, t2);
@@ -349,7 +351,7 @@ extend LDRSB_imm
 	otawa_sem = {
 		if_cond_load
 			if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-			seti(t2, if setu == 0 then -(immh::imml) else (immh::imml) endif);
+			seti(t2, if setu == 0 then -u32(immh::imml) else (immh::imml) endif);
 			if setpre == 0 then _set(t1, rn.i); else add(t1, rn.i, t2); endif;
 			load(rd.i, t1, INT8);
 			if setpre == 0 then add(rn.i, rn.i, t2);
@@ -375,7 +377,7 @@ extend LDRSH_imm
 	otawa_sem = {
 		if_cond_load
 			if rn.use_pc then seti(R(15), __IADDR + 8); endif;
-			seti(t2, if setu == 0 then -(immh::imml) else (immh::imml) endif);
+			seti(t2, if setu == 0 then -u32(immh::imml) else (immh::imml) endif);
 			if setpre == 0 then _set(t1, rn.i); else add(t1, rn.i, t2); endif;
 			load(rd.i, t1, INT16);
 			if setpre == 0 then add(rn.i, rn.i, t2);
@@ -596,7 +598,7 @@ extend STRH_imm
 	otawa_sem = {
 		if_cond_store
 			if rn.use_pc || rd.use_pc then seti(R(15), __IADDR + 8); endif;
-			seti(t2, if setu == 0 then -(immh::imml) else (immh::imml) endif);
+			seti(t2, if setu == 0 then -u32(immh::imml) else (immh::imml) endif);
 			if setpre == 0 then _set(t1, rn.i); else add(t1, rn.i, t2); endif;
 			store(rd.i, t1, UINT16);
 			if setpre == 0 then add(rn.i, rn.i, t2);
