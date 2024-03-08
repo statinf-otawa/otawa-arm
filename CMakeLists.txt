@@ -100,9 +100,12 @@ target_link_libraries(${PROC} "${OTAWA_LDFLAGS} -Wl,-rpath -Wl,${ORIGIN}/../.. '
 
 # installation
 set(PLUGIN_PATH "${OTAWA_PREFIX}/lib/otawa/${NAMESPACE}")
+set(LOADER_PATH "${OTAWA_PREFIX}/lib/otawa/loader")
 install(TARGETS ${PROC} LIBRARY		DESTINATION ${PLUGIN_PATH})
 install(FILES	${PROC}.eld			DESTINATION ${PLUGIN_PATH})
-install(FILES	elf_${ELF_NUM}.eld	DESTINATION ${OTAWA_PREFIX}/lib/otawa/loader)
+install(TARGETS ${PROC} LIBRARY		DESTINATION ${LOADER_PATH})
+install(FILES	${PROC}.eld			DESTINATION ${LOADER_PATH})
+install(FILES	elf_${ELF_NUM}.eld	DESTINATION ${LOADER_PATH})
 if(CONFIG)
 	install(FILES	${CONFIG}		DESTINATION ${PLUGIN_PATH})
 endif()
