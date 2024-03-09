@@ -686,6 +686,7 @@ public:
 			String label(infos.name);
 			Symbol *symbol = new Symbol(*file, label, kind, infos.vaddr & mask, infos.size);
 			file->addSymbol(symbol);
+			symbols.push(symbol);
 		}
 		//gel_enum_free(iter);
 #		ifdef ARM_THUMB
@@ -758,6 +759,19 @@ public:
 
 
 	otawa::Inst *decode(Address addr, Segment *seg) {
+
+		bool found = false;
+		for(auto symb : symbols)  {
+			if(symb->kind() == Symbol::FUNCTION) {
+				if(symb->address() <= addr && symb->address()+symb->size() > addr) {
+					found = true;
+					break;
+				}
+			}
+		}
+		//Some weird/unused address after functions
+		if(!found) 
+			return nullptr;
 
 		// get kind
 		arm_inst_t *inst = decode_raw(addr);
@@ -958,6 +972,7 @@ private:
 #	ifdef ARM_MEM_IO
 		otawa::arm::IOManager *io_man;
 #	endif
+	Vector<Symbol*> symbols;
 };
 
 
