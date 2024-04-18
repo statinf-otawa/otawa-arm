@@ -383,7 +383,8 @@ private:
 // ITInst class
 class ITInst: public otawa::Inst {
 public:
-	ITInst(otawa::Inst *inst, int cond): i(inst), c(cond) { }
+	ITInst(otawa::Inst *inst, int cond): i(inst), c(cond) {
+	}
 
 	kind_t kind() override { return i->kind() | IS_COND; }
 	otawa::Inst *target() override { return i->target(); }
