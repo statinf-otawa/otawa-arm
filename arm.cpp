@@ -318,11 +318,11 @@ public:
 		}
 
 	// Inst overload
-	virtual void dump(io::Output& out);
-	virtual kind_t kind() { return _kind; }
-	virtual address_t address() const { return _addr; }
-	virtual t::uint32 size() const { return _size; }
-	virtual Process &process() { return proc; }
+	void dump(io::Output& out) override;
+	kind_t kind() override { return _kind; }
+	address_t address() const override { return _addr; }
+	t::uint32 size() const override { return _size; }
+	inline Process &process() { return proc; }
 
 	virtual const Array<hard::Register *>& readRegs() override {
 		if (!isRegsDone) {
@@ -345,7 +345,9 @@ public:
 	Condition condition() override;
 
 	int multiCount() override { return otawa::arm::NUM_REGS_LOAD_STORE(this); }
-	
+
+	virtual kind_t indirectKind(otawa::Inst *base) { return kind(); }
+
 protected:
 	Process &proc;
 	kind_t _kind;
@@ -368,11 +370,14 @@ public:
 		: Inst(process, kind & ~IS_CONTROL, addr, size), _target(0), isTargetDone(false)
 		{ }
 
-	otawa::Inst *target() override;
-	kind_t kind() override;
+	otawa::Inst *target() override { return indirectTarget(this); }
+	kind_t kind() override { return indirectKind(prevInst()); }
+	kind_t indirectKind(otawa::Inst * prev) override;
+
+	otawa::Inst *indirectTarget(otawa::Inst *base);
 
 protected:
-	arm_address_t decodeTargetAddress(void);
+	arm_address_t decodeTargetAddress(otawa::Inst *base);
 
 private:
 	otawa::Inst *_target;
@@ -383,10 +388,14 @@ private:
 // ITInst class
 class ITInst: public otawa::Inst {
 public:
-	ITInst(otawa::Inst *inst, int cond): i(inst), c(cond) { }
+	ITInst(arm2::Inst *inst, int cond): i(inst), c(cond) {
+	}
 
-	kind_t kind() override { return i->kind() | IS_COND; }
-	otawa::Inst *target() override { return i->target(); }
+	kind_t kind() override { return i->indirectKind(prevInst()) | IS_COND; }
+
+	otawa::Inst *target() override {
+		return static_cast<BranchInst *>(i)->indirectTarget(this);
+	}
 
 	void dump(io::Output& out) override {
 		static cstring conds[16] = {
@@ -422,7 +431,7 @@ public:
 	}
 
 private:
-	otawa::Inst *i;
+	arm2::Inst *i;
 	int c;
 	static sem::cond_t sem_conds[16];
 };
@@ -750,7 +759,7 @@ public:
 	 */
 	void makeIT(otawa::Inst *i, t::uint8 firstcond, t::uint8 mask, Segment *seg) {
 		do {
-			otawa::Inst *n = decode(i->topAddress(), seg);
+			auto n = static_cast<arm2::Inst *>(decode(i->topAddress(), seg));
 			i = new ITInst(n, firstcond ^ ((~mask >> 3) & 0b1));
 			seg->insert(i);
 			mask <<= 1;
@@ -1022,8 +1031,8 @@ void Inst::decodeRegs(void) {
 	arm_free_inst(inst);
 }
 
-
-arm_address_t BranchInst::decodeTargetAddress(void) {
+///
+arm_address_t BranchInst::decodeTargetAddress(otawa::Inst *base) {
 
 	// get the target
 	arm_inst_t *inst= proc.decode_raw(address());
@@ -1037,14 +1046,13 @@ arm_address_t BranchInst::decodeTargetAddress(void) {
 		if(_kind & Process::IS_BL_1) {
 			arm_inst_t *pinst = proc.decode_raw(address() - 2);
 			Inst::kind_t pkind = arm_kind(pinst);
-			if(pkind & Process::IS_BL_0) {
+			if(pkind & Process::IS_BL_0)
 				target_addr = arm_target(pinst) + target_addr;
-			}
 			proc.free_inst(pinst);
 		}
 
 		// ldr ip, [pc, #k]; bx ip
-		else if(kind() & Process::IS_BX_IP) {
+		else if(indirectKind(base) & Process::IS_BX_IP) {
 
 			// look current and previous instruction words
 			t::uint32 cur_word, pre_word;
@@ -1071,7 +1079,10 @@ arm_address_t BranchInst::decodeTargetAddress(void) {
 
 /**
  */
-BranchInst::kind_t BranchInst::kind(void) {
+BranchInst::kind_t BranchInst::indirectKind(otawa::Inst *base) {
+	//cerr << "DEBUG: kind of " << address() << io::endl;
+	//cerr << "DEBUG: prevInst " << (void *)prevInst() << io::endl;
+
 	if(!(_kind & IS_CONTROL)) {
 		_kind |= IS_CONTROL;
 
@@ -1088,12 +1099,12 @@ BranchInst::kind_t BranchInst::kind(void) {
 		}
 
 		// ARM mode
-		else if(size() == 4 && prevInst() != nullptr && prevInst()->topAddress() == address()) {
+		else if(size() == 4 && base->prevInst() != nullptr && base->prevInst()->topAddress() == address()) {
 
 			// get instruction words
 			t::uint32 cword, pword;
 			process().get(address(), cword);
-			process().get(prevInst()->address(), pword);
+			process().get(base->prevInst()->address(), pword);
 
 			// mov lr, pc; mov pc, ri or bx ...
 			if((pword & 0x0fffffff) == 0x01a0e00f				// mov pc, lr
@@ -1107,10 +1118,10 @@ BranchInst::kind_t BranchInst::kind(void) {
 	return _kind;
 }
 
-otawa::Inst *BranchInst::target() {
+otawa::Inst *BranchInst::indirectTarget(otawa::Inst *base) {
 	if (!isTargetDone) {
 		isTargetDone = true;
-		arm_address_t a = decodeTargetAddress();
+		arm_address_t a = decodeTargetAddress(base);
 		if (a)
 			_target = process().findInstAt(a);
 	}
