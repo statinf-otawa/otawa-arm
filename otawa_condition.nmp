@@ -43,9 +43,9 @@ extend 	ADD_shr, ADD_imm,
 		TEQ_shr, TEQ_imm,
 		TST_shr, TST_imm,
 		UMLAL,
-		UMULL,
-		VNEG_A2,
-		VCMP_A1, VCMP_A2
+		UMULL
+		// VNEG_A2,
+		// VCMP_A1, VCMP_A2
 	otawa_condition = cond.otawa_condition
 
 extend	B_Cond,
